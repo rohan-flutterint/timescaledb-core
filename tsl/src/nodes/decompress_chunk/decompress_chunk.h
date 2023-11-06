@@ -92,6 +92,12 @@ typedef struct DecompressChunkPath
 	 */
 	bool perform_vectorized_aggregation;
 
+	/*
+	 * Columns that are used for vectorized aggregates. The list contains for each attribute -1 if
+	 * this is not an vectorized aggregate column or the Oid of the data type of the attribute.
+	 */
+	List *vectorized_aggregation_column;
+
 	List *compressed_pathkeys;
 	bool needs_sequence_num;
 	bool reverse;

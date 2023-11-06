@@ -50,6 +50,7 @@ typedef struct DecompressChunkState
 	List *decompression_map;
 	List *is_segmentby_column;
 	List *bulk_decompression_column;
+	List *vectorized_aggregation_column;
 	List *custom_scan_tlist;
 	int num_total_columns;
 	int num_compressed_columns;

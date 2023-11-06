@@ -268,6 +268,25 @@ build_decompression_map(PlannerInfo *root, DecompressChunkPath *path, List *scan
 				.fd = *compression_info, .bulk_decompression_possible = bulk_decompression_possible
 			};
 		}
+
+		/*
+		 * When creating vectorized aggregates, we are not able to determine the type of the
+		 * compressed column based on the output column since we emit partial aggregates for this
+		 * attribute and the raw attribute is not found in the targetlist. So, build a map with the
+		 * used data types here, which is used later to create the compression info properly.
+		 */
+		if (path->perform_vectorized_aggregation)
+		{
+			Assert(list_length(path->custom_path.path.parent->reltarget->exprs) == 1);
+			Var *var = linitial(path->custom_path.path.parent->reltarget->exprs);
+			Assert((Index) var->varno == path->custom_path.path.parent->relid);
+			if (var->varattno == destination_attno_in_uncompressed_chunk)
+				path->vectorized_aggregation_column =
+					lappend_int(path->vectorized_aggregation_column, var->vartype);
+			else
+				path->vectorized_aggregation_column =
+					lappend_int(path->vectorized_aggregation_column, -1);
+		}
 	}
 
 	/*
@@ -891,10 +910,11 @@ decompress_chunk_plan_create(PlannerInfo *root, RelOptInfo *rel, CustomPath *pat
 	 */
 	decompress_plan->custom_exprs = list_make1(vectorized_quals);
 
-	decompress_plan->custom_private = list_make5(settings,
+	decompress_plan->custom_private = list_make6(settings,
 												 dcpath->decompression_map,
 												 dcpath->is_segmentby_column,
 												 dcpath->bulk_decompression_column,
+												 dcpath->vectorized_aggregation_column,
 												 sort_options);
 
 	return &decompress_plan->scan.plan;
